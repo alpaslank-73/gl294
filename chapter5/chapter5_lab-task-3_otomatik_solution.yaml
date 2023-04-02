@@ -1,0 +1,77 @@
+- name: Performans olcumu icin 5 nolu lab in task 3 unu (loadbalancer) tum hostlarda otomatik yapmak icin playbook
+  hosts: stations
+  remote_user: guru 
+  become: true
+  tasks:
+  - file: 
+      path: /home/guru/playbooks/templates
+      state: directory
+      recurse: true
+
+  - copy: 
+      src: provision_lb_web_cluster.yaml
+      dest: /home/guru/playbooks/provision_lb_web_cluster.yaml
+
+  - command: ansible-playbook provision_lb_web_cluster.yaml
+    args:
+      chdir: /home/guru/playbooks
+
+# Container lar server1 deki centos repoya isaret ediyor ama server1 de centos repo yok. 
+# Bunun icin public repo kullanmalari gerekiyor; asagidaki shell task bunun icin.
+   
+  - shell: |
+       ansible all -i lb_web_inventory -m lineinfile -a 'path=/etc/yum.repos.d/AppStream.repo line="baseurl=http://vault.centos.org/8.3.2011/AppStream/$basearch/os/" regexp=^baseurl'
+       ansible all -i lb_web_inventory -m lineinfile -a 'path=/etc/yum.repos.d/BaseOS.repo line="baseurl=http://vault.centos.org/8.3.2011/BaseOS/$basearch/os/" regexp=^baseurl'
+    args:
+      chdir: /home/guru/playbooks
+
+  - copy: 
+      src: configure_web_cluster.yaml
+      dest: /home/guru/playbooks/configure_web_cluster.yaml
+
+  - copy: 
+      src: index.html.j2
+      dest: /home/guru/playbooks/templates/index.html.j2
+
+  - command: ansible-playbook -i lb_web_inventory configure_web_cluster.yaml
+    args:
+      chdir: /home/guru/playbooks
+
+  - dnf:
+      name: elinks
+      state: present
+
+  - name: Dummy task
+    debug:
+
+  - copy: 
+      src: configure_lb.yaml
+      dest: /home/guru/playbooks/configure_lb.yaml
+
+  - copy: 
+      src: haproxy.cfg.j2
+      dest: /home/guru/playbooks/templates/haproxy.cfg.j2
+
+  - command: ansible-playbook -i lb_web_inventory configure_lb.yaml
+    args:
+      chdir: /home/guru/playbooks
+
+# Scale icin opsiyonel task lar
+  
+  - command: ansible-playbook -e number_of_nodes=2 provision_lb_web_cluster.yaml
+    args:
+      chdir: /home/guru/playbooks
+  - shell: |
+       ansible all -i lb_web_inventory -m lineinfile -a 'path=/etc/yum.repos.d/AppStream.repo line="baseurl=http://vault.centos.org/8.3.2011/AppStream/$basearch/os/" regexp=^baseurl'
+       ansible all -i lb_web_inventory -m lineinfile -a 'path=/etc/yum.repos.d/BaseOS.repo line="baseurl=http://vault.centos.org/8.3.2011/BaseOS/$basearch/os/" regexp=^baseurl'
+    args:
+      chdir: /home/guru/playbooks
+
+  - name: configure web servers 
+    command: ansible-playbook -i lb_web_inventory configure_web_cluster.yaml
+    args:
+      chdir: /home/guru/playbooks
+  - name: Configure LB
+    command: ansible-playbook -i lb_web_inventory configure_lb.yaml
+    args:
+      chdir: /home/guru/playbooks
