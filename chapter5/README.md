@@ -8,8 +8,10 @@ server1# cd gl294/chapter5
 
 Egitimde 8 kisi varsa fork'u 8 yapabilirsin (aynı anda bu kadar kişi lab yapıyorken hypervisor üzerinde nasıl bir durum oluşuyor):
 
-server1# ansible playbook -f8 chapter5_lab-task-3_otomatik_solution.yaml
+server1# ansible-playbook -f8 chapter5_lab-task-3_otomatik_solution.yaml
 
 --------------------------
 
-scaleup.yaml Bonus lab'ı için!
+scaleup.yaml Bonus lab'ı için (Dikkat! server1 degil stationX uzerinde calisacak):
+
+guru@stationX playbooks $ ansible-playbook -i lb_web_inventory -e scale_num=2 scaleup.yaml
