@@ -1,0 +1,6 @@
+- name: ornek play
+  hosts: all
+  gather_facts: no
+  tasks:
+  - debug:
+      msg: 'Hello from {{ inventory_hostname }}'
